@@ -1,0 +1,116 @@
+﻿@model IEnumerable<ToiletApp.Models.Toilets>
+
+@using System.Text.Json
+@inject IConfiguration Configuration
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Advise)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Url)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Lat)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Lng)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Areas)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Advise)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Url)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Lat)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Lng)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Areas.Id)
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+<div id="map" style="width:100%; height:500px; margin-bottom:2rem;"></div>
+@section Scripts {
+    <!-- Validation scripts が必要なら -->
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+
+    <script>
+      let map, bounds;
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          center: { lat: 35.6804, lng: 139.7690 }, // Tokyo
+          zoom: 13
+        });
+        bounds = new google.maps.LatLngBounds();
+
+        // モデルから必要なプロパティだけ JSON 化
+        const toilets = @Html.Raw(
+          JsonSerializer.Serialize(
+            Model.Select(t => new {
+              lat = t.Lat,
+              lng = t.Lng,
+              title = t.Name
+            })
+          )
+        );
+
+        toilets.forEach(t => {
+          const pos = { lat: t.lat, lng: t.lng };
+          const marker = new google.maps.Marker({
+            position: pos,
+            map: map,
+            title: t.Name
+          });
+          bounds.extend(marker.getPosition());
+        });
+
+        // 全ピンを収める
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds);
+        }
+      }
+    </script>
+
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=@(Configuration["GoogleMaps:ApiKey"])&callback=initMap"
+      async defer>
+    </script>
+}   
