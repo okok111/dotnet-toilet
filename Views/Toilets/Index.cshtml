@@ -68,7 +68,6 @@
 </table>
 <div id="map" style="width:100%; height:500px; margin-bottom:2rem;"></div>
 @section Scripts {
-    <!-- Validation scripts が必要なら -->
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 
     <script>
@@ -76,33 +75,52 @@
 
       function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
-          center: { lat: 35.6804, lng: 139.7690 }, // Tokyo
+          center: { lat: 35.6804, lng: 139.7690 }, // 適宜北九州の中心に変更
           zoom: 13
         });
         bounds = new google.maps.LatLngBounds();
 
-        // モデルから必要なプロパティだけ JSON 化
+        // Model から必要なプロパティだけ JSON 化
         const toilets = @Html.Raw(
           JsonSerializer.Serialize(
             Model.Select(t => new {
-              lat = t.Lat,
-              lng = t.Lng,
-              title = t.Name
+              id      = t.Id,
+              lat     = t.Lat,
+              lng     = t.Lng,
+              title   = t.Name,
+              address = t.Address    // DB に保存している住所用カラム名に合わせてください
             })
           )
         );
 
-        toilets.forEach(t => {
-          const pos = { lat: t.lat, lng: t.lng };
+        toilets.forEach(place => {
+          const pos = { lat: place.lat, lng: place.lng };
           const marker = new google.maps.Marker({
             position: pos,
             map: map,
-            title: t.Name
+            title: place.title
           });
+
+          // InfoWindow の中身を作成
+          const content =
+            `<div>
+               <strong>${place.title}</strong><br/>
+               ${place.address}<br/>
+               <a href="/Toilets/Details/${place.id}">詳細ページへ</a>
+             </div>`;
+
+          const infow = new google.maps.InfoWindow({
+            content: content
+          });
+
+          // クリックで InfoWindow を開く
+          marker.addListener('click', () => {
+            infow.open(map, marker);
+          });
+
           bounds.extend(marker.getPosition());
         });
 
-        // 全ピンを収める
         if (!bounds.isEmpty()) {
           map.fitBounds(bounds);
         }
@@ -113,4 +131,4 @@
       src="https://maps.googleapis.com/maps/api/js?key=@(Configuration["GoogleMaps:ApiKey"])&callback=initMap"
       async defer>
     </script>
-}   
+}
