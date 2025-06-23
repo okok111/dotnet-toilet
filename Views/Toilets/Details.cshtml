@@ -1,8 +1,16 @@
 ﻿@model ToiletApp.Models.Toilets
+@inject IConfiguration Configuration
+
 
 @{
     ViewData["Title"] = "Details";
+    double avgRate = (double)ViewBag.AverageRate;
+    int fullStars = (int)Math.Floor(avgRate);
+    bool halfStar = (avgRate - fullStars) >= 0.5;
 }
+
+
+
 
 <h1>Details</h1>
 
@@ -48,7 +56,95 @@
         </dd>
     </dl>
 </div>
+<span>
+    @for (int i = 0; i < fullStars; i++)
+    {
+        <i class="bi bi-star-fill text-warning"></i>
+    }
+    @if (halfStar)
+    {
+        <i class="bi bi-star-half text-warning"></i>
+    }
+    @for (int i = fullStars + (halfStar ? 1 : 0); i < 5; i++)
+    {
+        <i class="bi bi-star text-warning"></i>
+    }
+</span> 
 <div>
     <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
     <a asp-action="Index">Back to List</a>
 </div>
+
+<!-- ① 地図表示 -->
+<div id="map-detail" style="width:100%; height:400px; margin-bottom:2rem;"></div>
+
+<!-- ② コメント一覧 -->
+<h3>コメント一覧 (@Model.Comments.Count)</h3>
+@if (Model.Comments.Any())
+{
+    <ul class="list-group mb-4">
+        @foreach (var c in Model.Comments.OrderByDescending(x => x.UseDate))
+        {
+            <li class="list-group-item">
+                <strong>@c.UseDate.ToShortDateString()</strong>
+                評価：@c.Rate/5<br />
+                @c.Details
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p>まだコメントがありません。</p>
+}
+
+<!-- ③ コメント投稿フォーム -->
+<h3>コメントを投稿する</h3>
+<form asp-controller="Comments" asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="ToiletsId" value="@Model.Id" />
+
+    <div class="form-group">
+        <label for="UseDate">訪問日</label>
+        <input type="date" name="UseDate" class="form-control" required />
+    </div>
+    <div class="form-group">
+        <label for="Rate">評価 (1〜5)</label>
+        <select name="Rate" class="form-control" required>
+            @for (int i = 1; i <= 5; i++)
+            {
+                <option value="@i">@i</option>
+            }
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="Details">コメント</label>
+        <textarea name="Details" class="form-control" rows="3" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary mt-2">投稿する</button>
+</form>
+
+<div class="mt-4">
+    <a asp-action="Index">一覧に戻る</a>
+</div>
+
+@section Scripts {
+    <script>
+        function initDetailMap() {
+          var center = { lat: @Model.Lat, lng: @Model.Lng };
+          var map = new google.maps.Map(document.getElementById('map-detail'), {
+            center: center,
+            zoom: 16
+          });
+          new google.maps.Marker({
+            position: center,
+            map: map,
+            title: "@Model.Name"
+          });
+        }
+    </script>
+
+    <script async defer
+            src="https://maps.googleapis.com/maps/api/js?key=@(Configuration["GoogleMaps:ApiKey"])&callback=initDetailMap">
+    </script>
+}

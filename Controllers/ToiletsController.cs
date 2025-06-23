@@ -35,12 +35,18 @@ namespace ToiletApp.Controllers
             }
 
             var toilets = await _context.Toilets
+                .Include(t => t.Comments)
                 .Include(t => t.Areas)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (toilets == null)
             {
                 return NotFound();
             }
+
+            // 平均評価を ViewBag に
+            ViewBag.AverageRate = toilets.Comments.Any()
+                ? toilets.Comments.Average(c => c.Rate)
+                : 0.0;  
 
             return View(toilets);
         }

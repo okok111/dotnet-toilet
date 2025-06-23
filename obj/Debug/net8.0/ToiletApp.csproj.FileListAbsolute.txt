@@ -260,3 +260,4 @@ C:\Users\okawa\Downloads\AspDotNetApps\ToiletApp\ToiletApp\obj\Debug\net8.0\refi
 C:\Users\okawa\Downloads\AspDotNetApps\ToiletApp\ToiletApp\obj\Debug\net8.0\ToiletApp.pdb
 C:\Users\okawa\Downloads\AspDotNetApps\ToiletApp\ToiletApp\obj\Debug\net8.0\ToiletApp.genruntimeconfig.cache
 C:\Users\okawa\Downloads\AspDotNetApps\ToiletApp\ToiletApp\obj\Debug\net8.0\ref\ToiletApp.dll
+C:\Users\okawa\Downloads\AspDotNetApps\ToiletApp\ToiletApp\obj\Debug\net8.0\ToiletApp.sourcelink.json
