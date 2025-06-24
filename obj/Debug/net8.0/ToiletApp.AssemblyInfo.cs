@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ToiletApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7725513148aae5ffaa8b791c3d5aa9ba8d3cfb6e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f37d8baa65ac54e7044fd2ebd956cf1755002855")]
 [assembly: System.Reflection.AssemblyProductAttribute("ToiletApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ToiletApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

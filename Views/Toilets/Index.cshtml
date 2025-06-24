@@ -1,5 +1,4 @@
 ﻿@model IEnumerable<ToiletApp.Models.Toilets>
-
 @using System.Text.Json
 @inject IConfiguration Configuration
 
@@ -10,125 +9,157 @@
 <h1>Index</h1>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create" class="btn btn-primary">Create New</a>
 </p>
-<table class="table">
+
+<p>
+    <button id="btn-search-conv" class="btn btn-outline-success">
+        コンビニも検索する
+    </button>
+</p>
+
+<table class="table" id="toilet-table">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Advise)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Url)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Lat)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Lng)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Areas)
-            </th>
+            <th>@Html.DisplayNameFor(m => m.First().Name)</th>
+            <th>@Html.DisplayNameFor(m => m.First().Advise)</th>
+            <th>@Html.DisplayNameFor(m => m.First().Url)</th>
+            <th>@Html.DisplayNameFor(m => m.First().Lat)</th>
+            <th>@Html.DisplayNameFor(m => m.First().Lng)</th>
+            <th>@Html.DisplayNameFor(m => m.First().Areas.Name)</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
+    @foreach (var item in Model) {
         <tr>
+            <td>@item.Name</td>
+            <td>@item.Advise</td>
             <td>
-                @Html.DisplayFor(modelItem => item.Name)
+                <a href="@item.Url" target="_blank">@item.Url</a>
             </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Advise)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Url)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Lat)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Lng)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Areas.Id)
-            </td>
+            <td>@item.Lat</td>
+            <td>@item.Lng</td>
+            <td>@item.Areas.Name</td>
             <td>
                 <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
                 <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
                 <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
             </td>
         </tr>
-}
+    }
     </tbody>
 </table>
+
 <div id="map" style="width:100%; height:500px; margin-bottom:2rem;"></div>
+
 @section Scripts {
     @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
 
     <script>
-      let map, bounds;
+        let map, bounds, placesService;
+        let toiletMarkers = [];
+        let convMarkers    = [];
 
-      function initMap() {
-        map = new google.maps.Map(document.getElementById('map'), {
-          center: { lat: 35.6804, lng: 139.7690 }, // 適宜北九州の中心に変更
-          zoom: 13
-        });
-        bounds = new google.maps.LatLngBounds();
+        function initMap() {
+            // 1) 地図初期化
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 33.8833, lng: 130.8758 }, // 北九州市中心
+                zoom: 13
+            });
+            bounds = new google.maps.LatLngBounds();
 
-        // Model から必要なプロパティだけ JSON 化
-        const toilets = @Html.Raw(
-          JsonSerializer.Serialize(
-            Model.Select(t => new {
-              id      = t.Id,
-              lat     = t.Lat,
-              lng     = t.Lng,
-              title   = t.Name,
-              address = t.Address    // DB に保存している住所用カラム名に合わせてください
-            })
-          )
-        );
+            // 2) Toilets モデルを JS オブジェクト化
+            const toilets = @Html.Raw(
+                JsonSerializer.Serialize(
+                    Model.Select(t => new {
+                        id      = t.Id,
+                        lat     = t.Lat,
+                        lng     = t.Lng,
+                        title   = t.Name,
+                        address = t.Advise
+                    })
+                )
+            );
 
-        toilets.forEach(place => {
-          const pos = { lat: place.lat, lng: place.lng };
-          const marker = new google.maps.Marker({
-            position: pos,
-            map: map,
-            title: place.title
-          });
+            // 3) トイレマーカーを立てる
+            toilets.forEach(place => {
+                const pos = { lat: place.lat, lng: place.lng };
+                const marker = new google.maps.Marker({
+                    position: pos,
+                    map: map,
+                    title: place.title,
+                    icon: '/images/toilet.png' // トイレアイコンを配置しておく
+                });
+                toiletMarkers.push(marker);
+                bounds.extend(pos);
 
-          // InfoWindow の中身を作成
-          const content =
-            `<div>
-               <strong>${place.title}</strong><br/>
-               ${place.address}<br/>
-               <a href="/Toilets/Details/${place.id}">詳細ページへ</a>
-             </div>`;
+                const iw = new google.maps.InfoWindow({
+                    content: `<div>
+                                <strong>${place.title}</strong><br/>
+                                ${place.address}<br/>
+                                <a href="/Toilets/Details/${place.id}">詳細へ</a>
+                              </div>`
+                });
+                marker.addListener('click', () => iw.open(map, marker));
+            });
 
-          const infow = new google.maps.InfoWindow({
-            content: content
-          });
+            // 4) 全トイレを収める
+            if (!bounds.isEmpty()) {
+                map.fitBounds(bounds);
+            }
 
-          // クリックで InfoWindow を開く
-          marker.addListener('click', () => {
-            infow.open(map, marker);
-          });
+            // 5) PlacesService 初期化
+            placesService = new google.maps.places.PlacesService(map);
 
-          bounds.extend(marker.getPosition());
-        });
-
-        if (!bounds.isEmpty()) {
-          map.fitBounds(bounds);
+            // 6) ボタンにイベントバインド
+            document.getElementById('btn-search-conv')
+                    .addEventListener('click', searchConvenience);
         }
-      }
+
+        // コンビニ検索＆マーカー表示
+        function searchConvenience() {
+            // 既存のコンビニマーカーをクリア
+            convMarkers.forEach(m => m.setMap(null));
+            convMarkers = [];
+
+            const request = {
+                location: map.getCenter(),
+                radius:   2000,               // 2km以内
+                type:     'convenience_store'
+            };
+            placesService.nearbySearch(request, (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK) {
+                    results.forEach(place => {
+                        const marker = new google.maps.Marker({
+                            map: map,
+                            position: place.geometry.location,
+                            title: place.name,
+                            icon: '/images/convenience.png'  // コンビニアイコン
+                        });
+                        convMarkers.push(marker);
+
+                        const iw = new google.maps.InfoWindow({
+                            content: `<div>
+                                        <strong>${place.name}</strong><br/>
+                                        ${place.vicinity || ''}<br/>
+                                        <a href="${place.url}" target="_blank">Google Mapで開く</a>
+                                      </div>`
+                        });
+                        marker.addListener('click', () => iw.open(map, marker));
+                        bounds.extend(place.geometry.location);
+                    });
+                    // トイレ＋コンビニ両方を収める
+                    map.fitBounds(bounds);
+                } else {
+                    alert('コンビニの検索に失敗しました：' + status);
+                }
+            });
+        }
     </script>
 
     <script
-      src="https://maps.googleapis.com/maps/api/js?key=@(Configuration["GoogleMaps:ApiKey"])&callback=initMap"
+      src="https://maps.googleapis.com/maps/api/js?key=@(Configuration["GoogleMaps:ApiKey"])&libraries=places&callback=initMap"
       async defer>
     </script>
 }
